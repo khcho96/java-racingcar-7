@@ -1,42 +1,48 @@
 package racingcar.service;
 
+import racingcar.domain.Car;
 import racingcar.domain.Cars;
+import racingcar.domain.RacingResult;
+import racingcar.random.RandomGenerator;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static racingcar.util.ParseInt.parseInt;
-import static racingcar.util.Split.split;
+import static racingcar.util.Splitter.split;
 import static racingcar.util.Validator.*;
 
 public class RacingService {
-    public Cars getCars(String inputCarNames) {
-        validateBlank(inputCarNames); // 입력값이 빈 문자열이 아닌지 검증
 
-        List<String> splitCarNames = split(inputCarNames); // 입력값을 쉼표(,)로 구분해 자동차 이름을 저장하는 리스트로 생성
+    private final RandomGenerator randomGenerator;
 
-        validateLength(splitCarNames); // 각 자동차 이름의 길이가 5를 초과하지 않는지 검증
-        validateNoCars(splitCarNames); // 유효한 자동차 이름이 1개 이상인지 검증
-
-        return Cars.of(splitCarNames); // 자동차 리스트 생성 및 반환
+    public RacingService(RandomGenerator randomGenerator) {
+        this.randomGenerator = randomGenerator;
     }
 
-    public int getRaceCount(String inputRaceCount) {
-        validateBlank(inputRaceCount); // 입력값이 빈 문자열이 아닌지 검증
+    public RacingResult race(String nameCsv, String InputRounds) {
+        int rounds = parseInt(InputRounds);
+        validateRounds(rounds);
 
-        int raceCount = parseInt(inputRaceCount); // 입력값을 양수로 변환, 불가능할 시 예외 발생
+        List<String> names = split(nameCsv);
+        validateNameEmpty(names);
 
-        validateOverflow(inputRaceCount, raceCount); // 정수 오버플로우 검증
+        Cars cars = Cars.of(names);
 
-        return raceCount;
+        List<Cars> snapshots = getSnapshots(rounds, cars);
+        List<String> winners = cars.getWinners();
+
+        return new RacingResult(snapshots, winners);
     }
 
-    public void runRace(Cars cars, int raceCount) {
-        cars.runRace(raceCount); // 자동차 경주 진행
-    }
+    private List<Cars> getSnapshots(int rounds, Cars cars) {
+        List<Cars> snapshots = new ArrayList<>();
+        for (int r = 0; r < rounds; r++) {
+            cars.startRace(randomGenerator);
 
-    public String decideWinners(Cars cars) {
-        int winnerSteps = cars.getWinnerSteps(); // 우승자 step 개수 반환
-
-        return cars.getWinners(winnerSteps); // 우승자 출력 문자열 반환
+            Cars carsClone = cars.clone();
+            snapshots.add(carsClone);
+        }
+        return snapshots;
     }
 }
